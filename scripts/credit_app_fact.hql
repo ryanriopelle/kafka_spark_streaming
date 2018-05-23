@@ -36,7 +36,7 @@ SELECT file_commit_ts_max AS file_commit_ts
           FROM (SELECT t1.*,
                        ROW_NUMBER() OVER(PARTITION BY file_commit_ts_min, file_commit_ts_max, create_ts
                                              ORDER BY create_ts DESC) rnum
-                  FROM fin_eagle_${ENV}_tbls.credit_app_fact_snapshot t1) t2
+                  FROM credit_app_fact_snapshot t1) t2
         WHERE rnum = 1) s;
 
 DROP TABLE IF EXISTS fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_max;
