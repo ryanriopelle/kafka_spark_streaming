@@ -9,6 +9,9 @@
 -- MODIFICATION HISTORY
 -- -------------------------------------------------------------------------------------------------
 -- Paritosh Rohilla   Initial Revision                                             05/09/2018
+-- Paritosh Rohilla   Changed dedup logic for all tables based on Marie's reco.    06/05/2018
+--                    Fixed partitioning logic to now pull all app nums for affected                  
+--                    partitions determined by the driver logic.                                      
 ----------------------------------------------------------------------------------------------------
 
 set tez.am.resource.memory.mb=6144;
@@ -27,7 +30,7 @@ set hive.vectorized.execution.reduce.groupby.enabled = true;
 
 USE fin_dssseagle_${ENV}_tbls;
 
----- Get min & max timestamp ranges
+-- Get min & max timestamp ranges
 DROP TABLE IF EXISTS fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_min;
 
 CREATE TABLE fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_min AS 
@@ -224,22 +227,31 @@ SELECT a.cca_app_num
       ,s.nitp_rc_4
       ,s.nitp_rc_5
       ,FROM_UNIXTIME(UNIX_TIMESTAMP(a.file_commit_timestamp, 'yyyyMMddHHmmss'))
-      ,CONCAT(SUBSTR(cca_timestamp,1,10), SUBSTR(cca_timestamp,12,2)) AS app_ts_dt_hr
+      ,a.app_ts_dt_hr
  FROM (SELECT t2.*
          FROM (SELECT t1.*,
+                      d.app_ts_dt_hr,
                       ROW_NUMBER() OVER(PARTITION BY cca_app_num
-                                            ORDER BY UNIX_TIMESTAMP(vzwdb_update_timestamp, 'MM/dd/yyyy HH:mm:ss') DESC) AS rnum
-                 FROM fin_eagle_${ENV}_tbls.credit_application t1,
-                      fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_min min,
-                      fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_max max
-                WHERE UNIX_TIMESTAMP(t1.file_commit_timestamp, 'yyyyMMddHHmmss') > UNIX_TIMESTAMP(min.file_commit_ts)
-                  AND UNIX_TIMESTAMP(t1.file_commit_timestamp, 'yyyyMMddHHmmss') <= UNIX_TIMESTAMP(max.file_commit_ts)) t2
+                                            ORDER BY UNIX_TIMESTAMP(vzwdb_update_timestamp, 'MM/dd/yyyy HH:mm:ss') DESC,
+                                                     UNIX_TIMESTAMP(file_commit_timestamp, 'yyyyMMddHHmmss') DESC) AS rnum
+                 FROM (SELECT DISTINCT CONCAT(SUBSTR(ca.cca_timestamp,1,10), SUBSTR(ca.cca_timestamp,12,2)) AS app_ts_dt_hr
+                         FROM fin_eagle_${ENV}_tbls.credit_application ca,
+                              fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_min min,
+                              fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_max max
+                        WHERE UNIX_TIMESTAMP(ca.file_commit_timestamp, 'yyyyMMddHHmmss') > UNIX_TIMESTAMP(min.file_commit_ts)
+                          AND UNIX_TIMESTAMP(ca.file_commit_timestamp, 'yyyyMMddHHmmss') <= UNIX_TIMESTAMP(max.file_commit_ts)) d,
+                      fin_eagle_${ENV}_tbls.credit_application t1
+                WHERE d.app_ts_dt_hr = CONCAT(SUBSTR(t1.cca_timestamp,1,10), SUBSTR(t1.cca_timestamp,12,2)) ) t2
        WHERE rnum = 1) a
 INNER JOIN 
       (SELECT t2.*
          FROM (SELECT t1.*,
                       ROW_NUMBER() OVER(PARTITION BY ccd_app_num
-                                            ORDER BY vzwdb_create_timestamp DESC) AS rnum
+                                            ORDER BY ccd_seq_num DESC, 
+                                                     UNIX_TIMESTAMP(ccd_timestamp, 'MM/dd/yyyy HH:mm:ss') DESC,
+                                                     UNIX_TIMESTAMP(vzwdb_create_timestamp, 'MM/dd/yyyy HH:mm:ss') DESC,
+                                                     UNIX_TIMESTAMP(vzwdb_update_timestamp, 'MM/dd/yyyy HH:mm:ss') DESC,
+                                                     UNIX_TIMESTAMP(file_commit_timestamp, 'yyyyMMddHHmmss') DESC) AS rnum
                  FROM fin_eagle_${ENV}_tbls.credit_decision t1) t2
        WHERE rnum = 1) d
    ON a.cca_app_num = d.ccd_app_num
@@ -247,8 +259,9 @@ INNER JOIN
       (SELECT t2.*
          FROM (SELECT t1.*,
                       ROW_NUMBER() OVER(PARTITION BY app_num
-                                            ORDER BY vzwdb_update_timestamp DESC,
-                                            UNIX_TIMESTAMP(t1.file_commit_timestamp, 'yyyyMMddHHmmss') DESC) AS rnum
+                                            ORDER BY UNIX_TIMESTAMP(vzwdb_create_timestamp, 'MM/dd/yyyy HH:mm:ss') DESC,
+                                                     UNIX_TIMESTAMP(vzwdb_update_timestamp, 'MM/dd/yyyy HH:mm:ss') DESC,
+                                                     UNIX_TIMESTAMP(file_commit_timestamp, 'yyyyMMddHHmmss') DESC) AS rnum
                  FROM fin_eagle_${ENV}_tbls.credit_app_fraud_dtl t1) t2
        WHERE rnum = 1) f
    ON a.cca_app_num = f.app_num
@@ -256,8 +269,8 @@ INNER JOIN
       (SELECT t2.*
          FROM (SELECT t1.*,
                       ROW_NUMBER() OVER(PARTITION BY app_num
-                                            ORDER BY COALESCE(update_timestamp, vzwdb_update_timestamp) DESC,
-                                            UNIX_TIMESTAMP(t1.file_commit_timestamp, 'yyyyMMddHHmmss') DESC) AS rnum
+                                            ORDER BY UNIX_TIMESTAMP(COALESCE(update_timestamp, vzwdb_update_timestamp), 'MM/dd/yyyy HH:mm:ss') DESC,
+                                                     UNIX_TIMESTAMP(file_commit_timestamp, 'yyyyMMddHHmmss') DESC) AS rnum
                  FROM fin_eagle_${ENV}_tbls.scorecard t1) t2
        WHERE rnum = 1) s
    ON a.cca_app_num = s.app_num
@@ -272,7 +285,7 @@ INNER JOIN
    ON d.ccd_credit_class_s = credclassref.ccd_credit_class;
 
 -- Insert current batch pull into the snapshot table
-INSERT INTO TABLE fin_dssseagle_${ENV}_tbls.credit_app_fact_snapshot
+INSERT INTO TABLE fin_dssseagle_${ENV}_tbls.credit_app_fact_snapshot_hist
 SELECT mn.file_commit_ts AS file_commit_ts_min,
        mx.file_commit_ts AS file_commit_ts_max,
        CURRENT_TIMESTAMP AS create_ts
