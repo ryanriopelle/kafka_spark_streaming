@@ -2,7 +2,7 @@
 set -x
 
 #####################################################################################
-# Script: credit_app_fact_build.sh
+# Script: test_credit_app_fact_build.sh
 #
 # Description: Job flow to build the EAGLE credit app table
 #
@@ -12,11 +12,10 @@ set -x
 #####################################################################################
 
 # Setting up these variable to enable logging of commands executed in this shell script
-
 export homeDir=$(pwd)/..
-mkdir -p LOGS/test_credit_app_fact_build
+mkdir -p $homeDir/LOGS/test_credit_app_fact_build
 export logDir=$homeDir/LOGS
-export logFile=$logDir/credit_app_fact_build
+export logFile=$logDir/test_credit_app_fact_build
 
 # Now redirect shell output to $logFile
 # Save stdout and stderr to file descriptors 3 and 4, then redirect them to log file 
@@ -26,7 +25,7 @@ exec 3>&1 4>&2 >$logFile.$$.log 2>&1
 # Usage
 #####################################################################################
 usage() {
-print "Usage:  credit_app_fact_build.sh <environ>; e.g. prd"
+print "Usage:  test_credit_app_fact_build.sh <environ>; e.g. prd"
 }
 
 # Check passed arguments
@@ -44,8 +43,8 @@ fi
 # Set variables
 #####################################################################################
 
-export scriptDir=$homeDir/scripts
-export restartFile=$logDir/credit_app_fact_restart
+export scriptDir=$homeDir/test
+export restartFile=$logDir/test_credit_app_fact_restart
 export env=$argEnv
 export rundate=$(date '+%Y%m%d')
 
@@ -70,7 +69,7 @@ case $restartStep in
 # Step 1 - Build fact table 
 #####################################################################################
 
-export hqlScript=$scriptDir/credit_app_fact.hql
+export hqlScript=$scriptDir/test_credit_app_fact.hql
 print "Executing step $restartStep - Script $hqlScript"
 
 beeline -u "jdbc:hive2://${BEELINE_HOST}:10000/default;principal=hive/_HOST@VBD.KRB.VZWCORP.COM" \

@@ -1,17 +1,13 @@
 ----------------------------------------------------------------------------------------------------
--- Script: credit_app_fact.hql
+-- Script: test_credit_app_fact.hql
 --
 -- Description
 --
--- Build fact table for Kyvos cube. This script brings credit application data.
--- The cube will be used for EAGLE Credit reporting dashboards
+-- Test build of fact table for Kyvos cube. 
 --
 -- MODIFICATION HISTORY
 -- -------------------------------------------------------------------------------------------------
--- Paritosh Rohilla   Initial Revision                                             05/09/2018
--- Paritosh Rohilla   Changed dedup logic for all tables based on Marie's reco.    06/05/2018
---                    Fixed partitioning logic to now pull all app nums for affected                  
---                    partitions determined by the driver logic.                                      
+-- Paritosh Rohilla   Initial Revision                                             06/12/2018
 ----------------------------------------------------------------------------------------------------
 
 set tez.am.resource.memory.mb=6144;
@@ -30,28 +26,10 @@ set hive.vectorized.execution.reduce.groupby.enabled = true;
 
 USE fin_dssseagle_${ENV}_tbls;
 
--- Get min & max timestamp ranges
-DROP TABLE IF EXISTS fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_min;
+-- Create the test fact table
+DROP TABLE IF EXISTS test_credit_app_fact;
 
-CREATE TABLE fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_min AS 
-SELECT file_commit_ts_max AS file_commit_ts 
-  FROM (SELECT t2.*
-          FROM (SELECT t1.*,
-                       ROW_NUMBER() OVER(PARTITION BY file_commit_ts_min, file_commit_ts_max, create_ts
-                                             ORDER BY create_ts DESC) rnum
-                  FROM credit_app_fact_snapshot t1) t2
-        WHERE rnum = 1) s;
-
-DROP TABLE IF EXISTS fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_max;
-
-CREATE TABLE fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_max AS 
-SELECT CAST(MAX(FROM_UNIXTIME(UNIX_TIMESTAMP(file_commit_timestamp, 'yyyyMMddHHmmss'))) AS TIMESTAMP) AS file_commit_ts
-  FROM fin_eagle_${ENV}_tbls.credit_application;
-
--- Create the fact table for the first run or when new cols. are added
--- DROP TABLE IF EXISTS credit_app_fact;
-
-CREATE TABLE IF NOT EXISTS credit_app_fact (
+CREATE TABLE IF NOT EXISTS test_credit_app_fact (
        cca_app_num string,
        cca_type string,
        cca_status string,
@@ -141,7 +119,7 @@ PARTITIONED BY (app_ts_dt_hr STRING)
 STORED AS ORC TBLPROPERTIES ("orc.compress"="SNAPPY");
 
 -- Build the fact table
-INSERT OVERWRITE TABLE credit_app_fact PARTITION (app_ts_dt_hr)
+INSERT OVERWRITE TABLE test_credit_app_fact PARTITION (app_ts_dt_hr)
 SELECT a.cca_app_num
       ,a.cca_type
       ,a.cca_status
@@ -286,10 +264,5 @@ INNER JOIN
       fin_dssseagle_${ENV}_tbls.ccd_credit_class credclassref
    ON d.ccd_credit_class_s = credclassref.ccd_credit_class;
 
--- Insert current batch pull into the snapshot table
-INSERT INTO TABLE fin_dssseagle_${ENV}_tbls.credit_app_fact_snapshot_hist
-SELECT mn.file_commit_ts AS file_commit_ts_min,
-       mx.file_commit_ts AS file_commit_ts_max,
-       CURRENT_TIMESTAMP AS create_ts
-  FROM fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_min mn,
-       fin_sseagle_${ENV}_tbls.tmp_credit_app_snapshot_max mx;
+-- DROP the test fact table since everything worked well
+DROP TABLE IF EXISTS test_credit_app_fact;
