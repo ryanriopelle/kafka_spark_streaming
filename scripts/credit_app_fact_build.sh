@@ -12,7 +12,9 @@ set -x
 #####################################################################################
 
 # Setting up these variable to enable logging of commands executed in this shell script
+
 export homeDir=$(pwd)/..
+mkdir -p LOGS
 export logDir=$homeDir/LOGS
 export logFile=$logDir/credit_app_fact_build
 
