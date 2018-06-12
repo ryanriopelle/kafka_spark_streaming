@@ -1,6 +1,6 @@
 misc/
 backups/
-LOGS/
+LOGS/*
 target/
 target
 *.class
