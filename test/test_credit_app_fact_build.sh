@@ -35,7 +35,7 @@ print "Usage:  test_credit_app_fact_build.sh <environ>; e.g. prd"
 if [[ $# != 1 ]]
 then
     usage
-    exit
+    exit 1
 else
     argEnv=$1
 fi
