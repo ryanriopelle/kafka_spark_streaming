@@ -13,9 +13,11 @@ set -x
 
 # Setting up these variable to enable logging of commands executed in this shell script
 export homeDir=$(pwd)/..
-mkdir -p $homeDir/LOGS
 export logDir=$homeDir/LOGS
 export logFile=$logDir/test_credit_app_fact_build
+
+# Create LOG directory if it does not exist
+mkdir -p $logDir
 
 # Now redirect shell output to $logFile
 # Save stdout and stderr to file descriptors 3 and 4, then redirect them to log file 
