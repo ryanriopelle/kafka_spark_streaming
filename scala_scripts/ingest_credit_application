@@ -3,7 +3,10 @@
 import org.apache.spark.sql.streaming.{OutputMode, Trigger}
 import scala.concurrent.duration._
 
-val records = spark.readStream.format("kafka").option("subscribepattern", "EagleStreaming").option("kafka.bootstrap.servers", "10-119-103-6.ebiz.verizon.com:6667").option("startingoffsets", "latest").option("maxOffsetsPerTrigger", 1).load
+val records = spark.readStream.format("kafka").option("subscribepattern", "EagleStreaming").
+|option("kafka.bootstrap.servers", "10-119-103-6.ebiz.verizon.com:6667").
+|option("startingoffsets", "latest").option("maxOffsetsPerTrigger", 1000).
+|option("rowsPerSecond", 1000).load
 
 val result = records.select($"key" cast "string", $"value" cast "string", $"topic", $"partition",$"offset").select(
 |(expr("(split(value, ','))[0]").cast("string").as("cca_app_num")), expr("(split(value, ','))[1]").cast("string").as("cca_type"),
@@ -48,7 +51,6 @@ val result = records.select($"key" cast "string", $"value" cast "string", $"topi
 |expr("(split(value, ','))[40]").cast("string").as("ing_primary_key"))
 
 val sq = result.writeStream.format("console").option("truncate", false).trigger(Trigger.ProcessingTime(10.seconds)).outputMode(OutputMode.Append).queryName("from-kafka-to-console").start
-
 
 
 
