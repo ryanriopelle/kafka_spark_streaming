@@ -27,7 +27,7 @@ conf.setAppName("KafkaStreamingPOC")
 
 //val sc = new SparkContext(conf)
 
-val streamingContext = new StreamingContext(sc, Seconds(10))
+val streamingContext = new StreamingContext(sc, Seconds(60))
 val sqlContext = new org.apache.spark.sql.SQLContext(sc)
 val hiveSqlContext = new HiveContext(sc)
 
@@ -53,50 +53,11 @@ streamingContext,
 PreferConsistent,
 Subscribe[String, String](topics, kafkaParams))
 
-
-// stream.foreachRDD { rdd =>
-//   val offsetRanges = rdd.asInstanceOf[HasOffsetRanges].offsetRanges
-//   rdd.foreachPartition { iter =>
-//     val o: OffsetRange = offsetRanges(TaskContext.get.partitionId)
-//     println(s"${o.topic} ${o.partition} ${o.fromOffset} ${o.untilOffset}")
-//   }
-// }
-
 var inputStream = stream.map(record=>(record.value().toString))
 
-inputStream.foreachRDD{rdd => rdd.collect().last}
-
-streamingContext.start()
-
-
-//Starts the input stream for kafka topic
-// Need increase heap space, reduce your consumer threads, or lower your fetch size or max queue size
-
-
-//print out last
-
-
-
-
-
-
-
-
-
-
-//Loops through the input stream and updates the table "streaming table" that can be accessed.
-inputStream.foreachRDD {jsonRdd =>
-println(jsonRdd)
-      // var streamDF = sqlContext.read.csv(jsonRdd)
-      // jsonRdd.printSchema
-      // println("Creating streamDF_json")
-      // streamDF.createOrReplaceTempView("streamDF_json")
-      // var dataDf = sqlContext.sql("SELECT message.data.* FROM streamDF_json")
-      // dataDf.printSchema()
-      // dataDf.collect
-      // dataDf.createOrReplaceTempView("streamingTable")
-}
-
+inputStream.foreachRDD(rdd => if (!rdd.isEmpty()) {
+  rdd.collect().foreach(println)
+})
 
 HiveThriftServer2.startWithContext(hiveSqlContext)
 streamingContext.start()
@@ -108,4 +69,3 @@ streamingContext.awaitTermination()
 
 
 
-val reader = CSVReader(InputStreamReader(inputStream, "UTF-8"));
