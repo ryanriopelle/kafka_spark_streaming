@@ -27,11 +27,11 @@ conf.setAppName("KafkaStreamingPOC")
 
 //val sc = new SparkContext(conf)
 
-val streamingContext = new StreamingContext(sc, Seconds(10))
+val streamingContext = new StreamingContext(sc, Seconds(60))
 val sqlContext = new org.apache.spark.sql.SQLContext(sc)
 val hiveSqlContext = new HiveContext(sc)
 
-hiveSqlContext.setConf("hive.server2.thrift.port", "10007")
+hiveSqlContext.setConf("hive.server2.thrift.port", "10006")
 hiveSqlContext.setConf("hive.server2.authentication","NOSASL")
 
 // "zookeeper.connect" -> "tbldakf01adv-hdp.tdc.vzwcorp.com:6667",
@@ -76,13 +76,14 @@ recordArr(20),recordArr(21))
 "cca_current_user","cca_user_name","cca_timestamp","cca_num_of_phones","cca_agent_code",
 "cca_region_ind","cca_bill_city")
 streamDF.createOrReplaceTempView("streamDF")
-spark.sql("SELECT * FROM streamDF").show()
+spark.sql("DROP TABLE IF EXISTS eagle.view_Stream")
+spark.sql("CREATE table eagle.view_Stream AS SELECT * FROM streamDF")
+spark.sql("SELECT * FROM eagle.view_Stream").show
 // var dataDf = sqlContext.sql("SELECT message.data.* FROM streamDF")
 // dataDf.printSchema()
 //dataDf.collect
 // dataDf.createOrReplaceTempView("streamingTable")
 })
-
 
 HiveThriftServer2.startWithContext(hiveSqlContext)
 streamingContext.start()
