@@ -1,0 +1,2 @@
+spark-shell --conf "spark.driver.extraJavaOptions=-Dhttp.proxyHost=proxy.ebiz.verizon.com -Dhttp.proxyPort=80 -Dhttps.proxyHost=proxy.ebiz.verizon.com -Dhttps.proxyPort=80" --packages org.apache.spark
+:spark-sql-kafka-0-10_2.11:2.2.0,org.apache.spark:spark-streaming-kafka-0-10_2.11:2.1.0
