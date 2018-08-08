@@ -1,0 +1,6 @@
+# There are a couple of ways to manage dependencies in SBT
+# One way that works is by providing the artifactory repo 
+# Krishnas recommended way is to add proxies locatted in this same folder for java, sbt and command line
+# Remember that the main sbt program is located under /apps/sbt
+# Then there are configurations within the local directory
+# And then configurations within the local project

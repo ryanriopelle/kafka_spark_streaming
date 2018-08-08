@@ -1,0 +1,2 @@
+export JAVA_OPTS="$JAVA_OPTS -Dhttp.proxyHost=proxy.ebiz.verizon.com -Dhttp.proxyPort=80"
+export SBT_OPTS="$SBT_OPTS -Dhttp.proxyHost=proxy.ebiz.verizon.com -Dhttp.proxyPort=80"
