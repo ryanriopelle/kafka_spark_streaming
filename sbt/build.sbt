@@ -2,10 +2,10 @@ name := "EagleStreaming"
 version := "1.0"
 
 scalaVersion := "2.11.8"
-val sparkVersion = "2.0.0"
+val sparkVersion = "2.1.0"
+
+
 //scalaHome := Some(file("/usr/hdp/2.6.4.0-91/spark2"))
-
-
 //resolvers += 
 //"Artifactory" at "https://oneartifactory.verizon.com/artifactory/CV9V_ONEDIGITALMOBILE-SBT-Virtual/"
 
@@ -15,7 +15,10 @@ libraryDependencies ++= Seq(
 	"org.apache.spark" %% "spark-mllib" % sparkVersion % "provided",
 	"org.apache.spark" %% "spark-mllib-local" % sparkVersion % "provided",
 	"org.apache.spark" %% "spark-sql" % sparkVersion % "provided",
-	"org.apache.spark" %% "spark-hive" % sparkVersion % "provided"
+	"org.apache.spark" %% "spark-hive" % sparkVersion % "provided",
+	"org.apache.spark" %% "spark-streaming-kafka-0-10" % sparkVersion % "provided",
+	"org.apache.spark" %% "spark-sql-kafka-0-10" % sparkVersion % "provided",
+	"org.apache.spark" %% "spark-hive-thriftserver" % "2.2.0" % "provided"
   )
 
 test in assembly := {}

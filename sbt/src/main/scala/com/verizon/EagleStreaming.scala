@@ -19,11 +19,12 @@ import org.apache.spark.streaming.kafka010.LocationStrategies.PreferConsistent
 import org.apache.spark.streaming.kafka010.ConsumerStrategies.Subscribe
 
 
-object EagleStreaming{
-  def main(args: Array[String]){	
+object EagleStreaming{ //if spark shell comment out
+  def main(args: Array[String]){ //if spark shell comment out
+
 	val conf = new SparkConf()
-	conf.setAppName("EagleStreaming")	
-	val sc = new SparkContext(conf)
+	conf.setAppName("EagleStreaming")
+	val sc = new SparkContext(conf)  //if spark shell comment out
 	val streamingContext = new StreamingContext(sc, Seconds(60))
 	val sqlContext = new org.apache.spark.sql.SQLContext(sc)
 	val hiveSqlContext = new HiveContext(sc)
@@ -45,7 +46,7 @@ object EagleStreaming{
 	//Can list mutliple topics here if wanted
 	// EagleStreaming_2
 	// cdl_dev_eagle_poc 
-	val topics = Array("EagleStreaming_1")
+	val topics = Array("EagleStreaming_24")
 
 	//Raw stream Info
 	val stream = KafkaUtils.createDirectStream[String, String](
@@ -53,14 +54,14 @@ object EagleStreaming{
 	PreferConsistent,
 	Subscribe[String, String](topics, kafkaParams))
 
-	case class employee(eid: String, name: String, salary: String, destination: String)
+	//case class employee(eid: String, name: String, salary: String, destination: String)
 
 	// var inputStream = stream.map(record=>(record.value().toString))
 	var inputStream = stream.map (record=> record.value().toString)
 
 	inputStream.foreachRDD(rdd => if (!rdd.isEmpty()) {
 	  val streamDF = rdd.map { record => {
-	              val recordArr = record.split(",")
+	              val recordArr = record.split("|")
 	              (recordArr(0),recordArr(1),recordArr(2),recordArr(3),recordArr(4),
 	recordArr(5),recordArr(6),recordArr(7),recordArr(8),recordArr(9),
 	recordArr(10),recordArr(11),recordArr(12),recordArr(13),recordArr(14),
@@ -73,10 +74,14 @@ object EagleStreaming{
 	"cca_region_ind","cca_bill_city")
 
 	streamDF.createOrReplaceTempView("streamDF")
-	spark.sql("DROP TABLE IF EXISTS eagle.view_Stream")
-	spark.sql("CREATE table eagle.view_Stream AS SELECT * FROM streamDF PARTITION (date_")
-	spark.sql("SELECT * FROM eagle.view_Stream").show
+	// spark.sql("DROP TABLE IF EXISTS eagle.eagle_streaming_poc_1")
+	sqlContext.sql("set hive.exec.dynamic.partition=true")
+	sqlContext.sql("SET hive.exec.dynamic.partition.mode = nonstrict")
+	sqlContext.sql("CREATE TABLE IF NOT EXISTS eagle.eagle_streaming_poc_1 (cca_type String, cca_status String, cca_previous String, cca_name String, cca_street_number String, cca_street_name String, cca_street_type String, cca_street_suite String, cca_city String, cca_state String, cca_zip String, cca_market String, cca_order_type String, cca_phone String, cca_current_user String, cca_user_name String, cca_timestamp String, cca_num_of_phones String, cca_agent_code String, cca_region_ind String, cca_bill_city String) PARTITIONED BY (cca_app_num STRING)")
+	sqlContext.sql("INSERT OVERWRITE TABLE eagle.eagle_streaming_poc_1 PARTITION (cca_app_num) SELECT * FROM streamDF")
+	sqlContext.sql("SELECT * FROM eagle.eagle_streaming_poc").show
 	})
+
 	HiveThriftServer2.startWithContext(hiveSqlContext)
 	streamingContext.start()
   }
