@@ -25,11 +25,12 @@ object EagleStreaming{ //if spark shell comment out
 	val conf = new SparkConf()
 	conf.setAppName("EagleStreaming")
 	val sc = new SparkContext(conf)  //if spark shell comment out
-	val streamingContext = new StreamingContext(sc, Seconds(60))
+	val streamingContext = new StreamingContext(sc, Seconds(300))
 	val sqlContext = new org.apache.spark.sql.SQLContext(sc)
 	val hiveSqlContext = new HiveContext(sc)
 	hiveSqlContext.setConf("hive.server2.thrift.port", "10006")
 	hiveSqlContext.setConf("hive.server2.authentication","NOSASL")
+	import sqlContext.implicits._
 
 	// "zookeeper.connect" -> "tbldakf01adv-hdp.tdc.vzwcorp.com:6667",
 	//"10-119-103-6.ebiz.verizon.com:6667"
@@ -59,28 +60,28 @@ object EagleStreaming{ //if spark shell comment out
 	// var inputStream = stream.map(record=>(record.value().toString))
 	var inputStream = stream.map (record=> record.value().toString)
 
-	inputStream.foreachRDD(rdd => if (!rdd.isEmpty()) {
-	  val streamDF = rdd.map { record => {
-	              val recordArr = record.split("|")
-	              (recordArr(0),recordArr(1),recordArr(2),recordArr(3),recordArr(4),
-	recordArr(5),recordArr(6),recordArr(7),recordArr(8),recordArr(9),
-	recordArr(10),recordArr(11),recordArr(12),recordArr(13),recordArr(14),
-	recordArr(15),recordArr(16),recordArr(17),recordArr(18),recordArr(19),
-	recordArr(20),recordArr(21))
-	            } }.toDF("cca_app_num","cca_type","cca_status","cca_previous","cca_name",
-	"cca_street_number","cca_street_name","cca_street_type","cca_street_suite","cca_city",
-	"cca_state","cca_zip","cca_market","cca_order_type","cca_phone",
-	"cca_current_user","cca_user_name","cca_timestamp","cca_num_of_phones","cca_agent_code",
-	"cca_region_ind","cca_bill_city")
+	inputStream.foreachRDD{rdd => if (!rdd.isEmpty()) {
+	  var streamDF = rdd.map { record => {
+	    val recordArr = record.split("|")
+	      (recordArr(0),recordArr(1),recordArr(2),recordArr(3),recordArr(4),
+	      recordArr(5),recordArr(6),recordArr(7),recordArr(8),recordArr(9),
+	      recordArr(10),recordArr(11),recordArr(12),recordArr(13),recordArr(14),
+	      recordArr(15),recordArr(16),recordArr(17),recordArr(18),recordArr(19),
+	      recordArr(20),recordArr(21))
+	    }}.toDF("cca_app_num","cca_type","cca_status","cca_previous","cca_name",
+	      "cca_street_number","cca_street_name","cca_street_type","cca_street_suite","cca_city",
+	      "cca_state","cca_zip","cca_market","cca_order_type","cca_phone",
+	      "cca_current_user","cca_user_name","cca_timestamp","cca_num_of_phones","cca_agent_code",
+	      "cca_region_ind","cca_bill_city")
 
-	streamDF.createOrReplaceTempView("streamDF")
-	// spark.sql("DROP TABLE IF EXISTS eagle.eagle_streaming_poc_1")
-	sqlContext.sql("set hive.exec.dynamic.partition=true")
-	sqlContext.sql("SET hive.exec.dynamic.partition.mode = nonstrict")
-	sqlContext.sql("CREATE TABLE IF NOT EXISTS eagle.eagle_streaming_poc_1 (cca_type String, cca_status String, cca_previous String, cca_name String, cca_street_number String, cca_street_name String, cca_street_type String, cca_street_suite String, cca_city String, cca_state String, cca_zip String, cca_market String, cca_order_type String, cca_phone String, cca_current_user String, cca_user_name String, cca_timestamp String, cca_num_of_phones String, cca_agent_code String, cca_region_ind String, cca_bill_city String) PARTITIONED BY (cca_app_num STRING)")
-	sqlContext.sql("INSERT OVERWRITE TABLE eagle.eagle_streaming_poc_1 PARTITION (cca_app_num) SELECT * FROM streamDF")
-	sqlContext.sql("SELECT * FROM eagle.eagle_streaming_poc").show
-	})
+	  streamDF.createOrReplaceTempView("streamDF")
+	  sqlContext.sql("set hive.exec.dynamic.partition=true")
+	  sqlContext.sql("SET hive.exec.dynamic.partition.mode = nonstrict")
+	  sqlContext.sql("CREATE TABLE IF NOT EXISTS eagle.eagle_streaming_poc (cca_type String, cca_status String, cca_previous String, cca_name String, cca_street_number String, cca_street_name String, cca_street_type String, cca_street_suite String, cca_city String, cca_state String, cca_zip String, cca_market String, cca_order_type String, cca_phone String, cca_current_user String, cca_user_name String, cca_timestamp String, cca_num_of_phones String, cca_agent_code String, cca_region_ind String, cca_bill_city String) PARTITIONED BY (cca_app_num STRING)")
+	  sqlContext.sql("INSERT OVERWRITE TABLE eagle.eagle_streaming_poc PARTITION (cca_app_num) SELECT * FROM streamDF")
+	  sqlContext.sql("SELECT * FROM eagle.eagle_streaming_poc").show
+	}}
+
 
 	HiveThriftServer2.startWithContext(hiveSqlContext)
 	streamingContext.start()
