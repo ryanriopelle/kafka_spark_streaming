@@ -11,3 +11,12 @@
 #git config --global --unset http.proxy 
 #git config --unset http.proxy
 #git config --unset https.proxy
+
+
+
+spark-submit --master yarn --deploy-mode cluster \
+    --conf spark.yarn.maxAppAttempts=4 \
+    --conf spark.yarn.am.attemptFailuresValidityInterval=1h \
+    --conf spark.yarn.max.executor.failures={8 * num_executors} \
+    --conf spark.yarn.executor.failuresValidityInterval=1h \
+    --conf spark.task.maxFailures=8
