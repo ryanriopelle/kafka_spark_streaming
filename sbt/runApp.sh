@@ -11,13 +11,10 @@ SRCDIR=$( cd -P $(dirname ${BASH_SOURCE[0]}); echo $PWD )
 --master yarn \
 --deploy-mode client \
 --class com.verizon.EagleStreaming \
---num-executors 3 \
---executor-memory 8G \
---driver-memory 8G \
 --conf spark.driver.maxResultSize=4G \
 --conf spark.dynamicAllocation.enabled=true \
 --conf spark.dynamicAllocation.minExecutors=2 \
---conf spark.dynamicAllocation.maxExecutors=10 \
+--conf spark.dynamicAllocation.maxExecutors=8 \
 --conf spark.shuffle.service.enabled=true \
 --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
 --conf spark.rdd.compress=true \

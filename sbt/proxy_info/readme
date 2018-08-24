@@ -4,3 +4,19 @@
 # Remember that the main sbt program is located under /apps/sbt
 # Then there are configurations within the local directory
 # And then configurations within the local project
+#
+#
+# To push the code from personal account you need to unset the proxy within git globally and locally
+#
+#git config --global --unset http.proxy 
+#git config --unset http.proxy
+#git config --unset https.proxy
+
+
+
+spark-submit --master yarn --deploy-mode cluster \
+    --conf spark.yarn.maxAppAttempts=4 \
+    --conf spark.yarn.am.attemptFailuresValidityInterval=1h \
+    --conf spark.yarn.max.executor.failures={8 * num_executors} \
+    --conf spark.yarn.executor.failuresValidityInterval=1h \
+    --conf spark.task.maxFailures=8
